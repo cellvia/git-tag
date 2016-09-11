@@ -13,22 +13,16 @@ module.exports = function(options) {
   options = options || {}
 
   var get = function(cb) {
-    
-    if (options.dir) {
-      var cmd = 'git -C '+options.dir+' tag -l'
-    }else{
-      var cmd = 'git tag -l'
-    }
+    var cmd = 'git tag -l'
     if (!options.localOnly) {
-      if (options.dir) {
-        cmd = 'git -C '+options.dir+' pull origin --tags; ' + cmd
-      }else{
-        cmd = 'git pull origin --tags; ' + cmd
-      }
+      cmd = 'git pull origin --tags && ' + cmd
     }
     exec(cmd, function(err, res){
       if (err) return callback(cb, err, [])
       res = res.replace(/^\s+|\s+$/g,'').split(/\n/)
+      res = res.filter(function(t){
+        return t.indexOf("x") === -1
+      })      
       try {
         res = res.sort(semver.compare)
       } catch(e) {}
@@ -38,19 +32,9 @@ module.exports = function(options) {
 
   var create = function(name, msg, cb) {
     msg = typeof msg === 'string' ? msg : ''
-    
-    if (options.dir) {
-      var cmd = 'git -C '+options.dir+' tag -a ' + name + ' -m "' + msg + '"'
-    }else{
-      var cmd = 'git tag -a ' + name + ' -m "' + msg + '"'
-    }
+    var cmd = 'git tag -a ' + name + ' -m "' + msg + '"'
     if (!options.localOnly) {
-      
-      if (options.dir) {
-        cmd += '; git -C '+options.dir+' push origin --tags'
-      }else{
-        cmd += '; git push origin --tags'
-      }  
+      cmd += ' && git push origin --tags'
     }
     exec(cmd, function(err){
       callback(cb, err, name)
@@ -58,18 +42,9 @@ module.exports = function(options) {
   }
 
   var remove = function(name, cb) {
-    
-    if (options.dir) {
-      var cmd = 'git -C '+options.dir+' tag -d ' + name
-    }else{
-      var cmd = 'git tag -d ' + name
-    }
+    var cmd = 'git tag -d ' + name
     if (!options.localOnly) {
-      if (options.dir) {
-        cmd += '; git -C '+options.dir+' push origin :refs/tags/' + name
-      }else{
-        cmd += '; git push origin :refs/tags/' + name
-      }
+      cmd += ' && git push origin :refs/tags/' + name
     }
     exec(cmd, function(err){
       callback(cb, err, name)
